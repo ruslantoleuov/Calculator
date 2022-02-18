@@ -134,10 +134,6 @@ function showOnDisplay(e) {
     tempValue = "";
     isCalculated = false;
   }
-
-  console.log(
-    ` displayText: ${display.textContent}, value: ${value}, tempValue: ${tempValue}, operator: ${operator}`
-  );
 }
 
 allButtons.forEach((btn) => btn.addEventListener("click", showOnDisplay));

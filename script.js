@@ -2,20 +2,24 @@ const ADD = "+";
 const SUBTRACT = "-";
 const MULTIPLY = "x";
 const DIVIDE = ":";
-const CLEAR = "C";
+const CLEAR = "AC";
 const EQUAL = "=";
+const SIGN = "+/-";
+const DOT = ".";
+const ZERO = "0";
+const PERCENT = "%";
 
 const display = document.querySelector(".display");
 const allButtons = Array.from(document.querySelectorAll(".btn"));
-const allNumbers = allButtons.filter((btn) => btn.textContent.match(/[0-9]/));
+const allNumbers = allButtons.filter((btn) => btn.textContent.match(/[0-9.]/));
 const allOperators = allButtons.filter((btn) =>
-  btn.textContent.match(/[^0-9]/)
+  btn.textContent.match(/[^0-9.]/)
 );
 
 let operator = "";
 let value = "";
-let tempValue = "";
 let isCalculated = false;
+let isOperatorAssigned = false;
 
 function add(num1, num2) {
   return Math.round((num1 + num2) * 100) / 100;
@@ -30,7 +34,8 @@ function multiply(num1, num2) {
 }
 
 function divide(num1, num2) {
-  return Math.round((num1 / num2) * 100) / 100;
+  let result = Math.round((num1 / num2) * 100) / 100;
+  return Number.isFinite(result) ? result : "Cannot divide by zero";
 }
 
 function operate(operator, num1, num2) {
@@ -53,86 +58,147 @@ function getCorrectOperatorFn(operator, num1, num2) {
 }
 
 function showOnDisplay(e) {
-  if (allNumbers.includes(e.target)) {
-    if (
-      display.textContent === "0" ||
-      display.textContent === ADD ||
-      display.textContent === SUBTRACT ||
-      display.textContent === MULTIPLY ||
-      display.textContent === DIVIDE
-    ) {
-      display.textContent = "";
+  if (
+    allNumbers.includes(e.target) &&
+    e.target.textContent === DOT &&
+    isOperatorAssigned
+  ) {
+    isOperatorAssigned = false;
+    display.textContent = ZERO + DOT;
+  } else if (allNumbers.includes(e.target) && isOperatorAssigned) {
+    isOperatorAssigned = false;
+    display.textContent = e.target.textContent;
+  } else if (allNumbers.includes(e.target) && isCalculated) {
+    isCalculated = false;
+    switch (display.textContent) {
+      case ZERO + DOT:
+        display.textContent += e.target.textContent;
+        break;
+      default:
+        display.textContent =
+          e.target.textContent !== DOT ? e.target.textContent : ZERO + DOT;
+        break;
     }
+  } else if (
+    display.textContent === ZERO &&
+    allNumbers.includes(e.target) &&
+    e.target.textContent === ZERO
+  ) {
+    return;
+  } else if (
+    display.textContent === ZERO &&
+    allNumbers.includes(e.target) &&
+    e.target.textContent !== DOT
+  ) {
+    display.textContent = e.target.textContent;
+  } else if (
+    display.textContent === ZERO &&
+    allOperators.includes(e.target) &&
+    (e.target.textContent === ADD ||
+      e.target.textContent === SUBTRACT ||
+      e.target.textContent === MULTIPLY ||
+      e.target.textContent === DIVIDE)
+  ) {
+    value = display.textContent;
+  } else if (
+    display.textContent === ZERO &&
+    allNumbers.includes(e.target) &&
+    e.target.textContent === DOT
+  ) {
+    display.textContent += e.target.textContent;
+  } else if (
+    display.textContent.startsWith(ZERO + DOT) &&
+    allNumbers.includes(e.target) &&
+    e.target.textContent !== DOT
+  ) {
+    display.textContent += e.target.textContent;
+  } else if (
+    display.textContent === ZERO + DOT &&
+    allOperators.includes(e.target)
+  ) {
+    display.textContent = ZERO;
+  } else if (
+    !display.textContent.includes(".") &&
+    allNumbers.includes(e.target) &&
+    e.target.textContent === DOT
+  ) {
+    display.textContent += e.target.textContent;
+  } else if (allNumbers.includes(e.target) && e.target.textContent !== DOT) {
+    display.textContent += e.target.textContent;
+  }
 
-    if (isCalculated) {
-      display.textContent = e.target.textContent;
-      value = display.textContent;
-      isCalculated = false;
+  if (allButtons.includes(e.target)) {
+    e.target.classList.add("highlight");
+    allButtons.forEach((button) => {
+      if (button.textContent !== e.target.textContent) {
+        button.classList.remove("highlight");
+      }
+    });
+  }
+
+  if (
+    allOperators.includes(e.target) &&
+    e.target.textContent !== CLEAR &&
+    e.target.textContent !== EQUAL &&
+    e.target.textContent !== SIGN &&
+    e.target.textContent !== PERCENT
+  ) {
+    if (operator === e.target.textContent && value) {
+      display.textContent = `${getCorrectOperatorFn(
+        operator,
+        +value,
+        +display.textContent
+      )}`;
+    }
+    value = display.textContent;
+    operator = e.target.textContent;
+    isOperatorAssigned = true;
+    isCalculated = false;
+  }
+
+  if (allOperators.includes(e.target) && e.target.textContent === SIGN) {
+    if (Math.sign(display.textContent) === 1) {
+      display.textContent = `${-Math.abs(display.textContent)}`;
+    } else if (Math.sign(display.textContent) === -1) {
+      display.textContent = `${Math.abs(display.textContent)}`;
     } else {
-      display.textContent += e.target.textContent;
-      value = display.textContent;
+      return;
     }
   }
 
   if (
-    e.target.textContent !== CLEAR &&
-    e.target.textContent !== EQUAL &&
     allOperators.includes(e.target) &&
-    !value &&
-    !tempValue &&
-    !operator
-  ) {
-    tempValue = "0";
-  } else if (
-    e.target.textContent !== CLEAR &&
-    e.target.textContent !== EQUAL &&
-    allOperators.includes(e.target) &&
-    value &&
-    tempValue &&
-    operator
+    e.target.textContent === EQUAL &&
+    operator &&
+    value
   ) {
     display.textContent = `${getCorrectOperatorFn(
       operator,
-      +tempValue,
-      +value
+      +value,
+      +display.textContent
     )}`;
-    operator = e.target.textContent;
     value = display.textContent;
-    if (value) {
-      tempValue = value;
-      value = "";
-    }
+    operator = "";
     isCalculated = true;
   } else if (
-    e.target.textContent !== CLEAR &&
-    e.target.textContent !== EQUAL &&
-    allOperators.includes(e.target)
+    allOperators.includes(e.target) &&
+    e.target.textContent === EQUAL &&
+    display.textContent &&
+    !value
   ) {
-    operator = e.target.textContent;
-    display.textContent = operator;
-    if (value) {
-      tempValue = value;
-      value = "";
-    }
-  }
-
-  if (e.target.textContent === EQUAL && operator && value && tempValue) {
-    display.textContent = `${getCorrectOperatorFn(
-      operator,
-      +tempValue,
-      +value
-    )}`;
-    tempValue = display.textContent;
-    value = "";
     isCalculated = true;
   }
 
-  if (e.target.textContent === CLEAR && allOperators.includes(e.target)) {
-    display.textContent = "0";
+  if (allOperators.includes(e.target) && e.target.textContent === PERCENT) {
+    display.textContent = Number(display.textContent) / 100;
+  }
+
+  if (allOperators.includes(e.target) && e.target.textContent === CLEAR) {
+    display.textContent = ZERO;
     operator = "";
     value = "";
-    tempValue = "";
     isCalculated = false;
+    isOperatorAssigned = false;
   }
 }
 
